@@ -1,74 +1,47 @@
 import { create } from "zustand";
 
-type ScanEntry = {
-  id: string;
-  type: "email" | "url";
+type ScanResult = {
   input: string;
-  status: "safe" | "danger" | "unknown";
-  createdAt: number;
+  type: "safe" | "phishing";
 };
 
-type AppState = {
-  emailCount: number;
-  urlCount: number;
-  threatLevel: "Safe" | "Warning" | "Danger";
-
-  scans: ScanEntry[];
+type Store = {
+  emailsScanned: number;
+  urlsChecked: number;
+  results: ScanResult[];
 
   scanEmail: (input: string) => void;
   scanUrl: (input: string) => void;
-
-  reset: () => void;
 };
 
-export const useStore = create<AppState>((set, get) => ({
-  emailCount: 0,
-  urlCount: 0,
-  threatLevel: "Safe",
+export const useStore = create<Store>((set) => ({
+  emailsScanned: 0,
+  urlsChecked: 0,
 
-  scans: [],
+  // IMPORTANT: NEVER undefined
+  results: [],
 
-  scanEmail: (input: string) => {
-    const isDanger = input.includes("login") || input.includes("verify");
-
-    const newScan: ScanEntry = {
-      id: crypto.randomUUID(),
-      type: "email",
-      input,
-      status: isDanger ? "danger" : "safe",
-      createdAt: Date.now(),
-    };
-
+  scanEmail: (input) =>
     set((state) => ({
-      emailCount: state.emailCount + 1,
-      scans: [newScan, ...state.scans],
-      threatLevel: isDanger ? "Danger" : state.threatLevel,
-    }));
-  },
+      emailsScanned: state.emailsScanned + 1,
+      results: [
+        ...state.results,
+        {
+          input,
+          type: input.includes("http") ? "phishing" : "safe",
+        },
+      ],
+    })),
 
-  scanUrl: (input: string) => {
-    const isDanger = input.includes("secure") || input.includes("login");
-
-    const newScan: ScanEntry = {
-      id: crypto.randomUUID(),
-      type: "url",
-      input,
-      status: isDanger ? "danger" : "safe",
-      createdAt: Date.now(),
-    };
-
+  scanUrl: (input) =>
     set((state) => ({
-      urlCount: state.urlCount + 1,
-      scans: [newScan, ...state.scans],
-      threatLevel: isDanger ? "Danger" : state.threatLevel,
-    }));
-  },
-
-  reset: () =>
-    set({
-      emailCount: 0,
-      urlCount: 0,
-      threatLevel: "Safe",
-      scans: [],
-    }),
+      urlsChecked: state.urlsChecked + 1,
+      results: [
+        ...state.results,
+        {
+          input,
+          type: input.includes("login") ? "phishing" : "safe",
+        },
+      ],
+    })),
 }));
